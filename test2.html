@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Cold Chain Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .navbar {
+            background: var(--card);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            margin-left: 1.5rem;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 5rem 1rem 1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .metric-title {
+            color: var(--text-light);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .chart-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: 400px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .locations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        .location-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .location-name {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-optimal {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-critical {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .location-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+        }
+
+        .stat-prediction {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .anomaly-alert {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+        .chart-container {
+            position: relative;
+            height: calc(100% - 3rem);
+        }
+
+        .predictions-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .prediction-header {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .prediction-item {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .ml-confidence {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-weight: 500;
+        }
+
+        .trend-up {
+            color: var(--success);
+        }
+
+        .trend-down {
+            color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                <i class="fas fa-snowflake"></i>
+                Smart Cold Chain Monitor
+            </div>
+            <div class="nav-links">
+                <a href="test2.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a href="location.html"><i class="fas fa-map-marker-alt"></i> Locations</a>
+                <a href="ai-insights.html"><i class="fas fa-robot"></i> AI Insights</a>
+                <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">
+                    <i class="fas fa-temperature-high"></i>
+                    Average Temperature
+                </div>
+                <div class="metric-value" id="avgTemp">--°C</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">
+                    <i class="fas fa-tint"></i>
+                    Average Humidity
+                </div>
+                <div class="metric-value" id="avgHumidity">--%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Active Locations
+                </div>
+                <div class="metric-value" id="locationCount">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Active Alerts
+                </div>
+                <div class="metric-value" id="alertCount">--</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-line"></i>
+                        Temperature Trends
+                    </div>
+                    <button class="refresh-btn" onclick="refreshData('temp')">
+                        <i class="fas fa-sync-alt" id="temp-refresh-icon"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-line"></i>
+                        Humidity Trends
+                    </div>
+                    <button class="refresh-btn" onclick="refreshData('humidity')">
+                        <i class="fas fa-sync-alt" id="humidity-refresh-icon"></i>
+                        Refresh
+                    </button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="fas fa-warehouse"></i>
+                    Location Status
+                </div>
+                <button class="refresh-btn" onclick="refreshData('locations')">
+                    <i class="fas fa-sync-alt" id="locations-refresh-icon"></i>
+                    Refresh
+                </button>
+            </div>
+            <div class="locations-grid" id="locationsGrid">
+                <!-- Locations will be populated here -->
+            </div>
+        </div>
+
+        <div class="predictions-card">
+            <div class="prediction-header">
+                <i class="fas fa-robot"></i>
+                AI Predictions & Insights
+            </div>
+            <div class="prediction-grid" id="predictionsGrid">
+                <!-- Predictions will be populated here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ML Model Class for Cold Chain Monitoring
+        class ColdChainMLModel {
+            constructor() {
+                this.baseFeatures = {
+                    'Warehouse A': { baseTemp: 5.0, baseHumid: 40.0 },
+                    'Transport Unit B': { baseTemp: 4.5, baseHumid: 42.0 },
+                    'Distribution Center': { baseTemp: 5.5, baseHumid: 38.0 }
+                };
+                this.historicalData = new Map();
+                this.predictions = new Map();
+            }
+
+            generateTimeFeatures(timestamp) {
+                const hour = timestamp.getHours();
+                const dayOfWeek = timestamp.getDay();
+                return {
+                    hour_sin: Math.sin(2 * Math.PI * hour / 24),
+                    hour_cos: Math.cos(2 * Math.PI * hour / 24),
+                    day_sin: Math.sin(2 * Math.PI * dayOfWeek / 7),
+                    day_cos: Math.cos(2 * Math.PI * dayOfWeek / 7)
+                };
+            }
+
+            predictNextHours(location, hours = 24) {
+                const predictions = [];
+                const now = new Date();
+                const baseValues = this.baseFeatures[location];
+
+                for (let i = 0; i < hours; i++) {
+                    const predictionTime = new Date(now.getTime() + i * 3600000);
+                    const timeFeatures = this.generateTimeFeatures(predictionTime);
+                    
+                    // Simulate ML prediction using base values and time features
+                    const timeFactor = timeFeatures.hour_sin;
+                    const temp = baseValues.baseTemp + 0.5 * timeFactor + (Math.random() * 0.4 - 0.2);
+                    const humidity = baseValues.baseHumid + 2 * timeFactor + (Math.random() * 2 - 1);
+
+                    predictions.push({
+                        timestamp: predictionTime,
+                        temperature: temp,
+                        humidity: humidity,
+                        confidence: 0.95 - (i * 0.02) // Confidence decreases with time
+                    });
+                }
+
+                this.predictions.set(location, predictions);
+                return predictions;
+            }
+
+            addHistoricalData(location, reading) {
+                if (!this.historicalData.has(location)) {
+                    this.historicalData.set(location, []);
+                }
+                const historical = this.historicalData.get(location);
+                historical.push(reading);
+                if (historical.length > 720) { // Keep 30 days of hourly readings
+                    historical.shift();
+                }
+            }
+
+            getAnomalyScore(location, reading) {
+                const historical = this.historicalData.get(location) || [];
+                if (historical.length < 24) return null;
+
+                const recentReadings = historical.slice(-24);
+                const mean = recentReadings.reduce((sum, r) => sum + r.temperature, 0) / recentReadings.length;
+                const stdDev = Math.sqrt(
+                    recentReadings.reduce((sum, r) => sum + Math.pow(r.temperature - mean, 2), 0) / recentReadings.length
+                );
+
+                const zScore = Math.abs((reading.temperature - mean) / stdDev);
+                return {
+                    score: zScore,
+                    isAnomaly: zScore > 2.5,
+                    mean,
+                    stdDev
+                };
+            }
+
+            analyzeTrends(location) {
+                const historical = this.historicalData.get(location) || [];
+                if (historical.length < 24) return null;
+
+                const recentData = historical.slice(-24);
+                const temperatures = recentData.map(r => r.temperature);
+                
+                // Calculate trend
+                const trend = temperatures.reduce((acc, curr, idx) => {
+                    if (idx === 0) return acc;
+                    return acc + (curr - temperatures[idx - 1]);
+                }, 0) / (temperatures.length - 1);
+
+                // Calculate seasonality
+                const hourlyAverages = Array(24).fill(0).map((_, hour) => {
+                    const hourReadings = historical.filter(r => r.timestamp.getHours() === hour);
+                    return hourReadings.reduce((sum, r) => sum + r.temperature, 0) / hourReadings.length;
+                });
+
+                return {
+                    trend,
+                    seasonality: hourlyAverages,
+                    forecastConfidence: Math.min(0.95, 0.5 + (historical.length / 720))
+                };
+            }
+        }
+
+        let tempChart, humidityChart;
+        const mlModel = new ColdChainMLModel();
+
+        function initCharts() {
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    }
+                }
+            };
+
+            tempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37,99,235,0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: commonOptions
+            });
+
+            humidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: '#0891b2',
+                        backgroundColor: 'rgba(8,145,178,0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: commonOptions
+            });
+        }
+
+        function getMockData() {
+            const now = new Date();
+            const timestamps = Array.from({length: 12}, (_, i) => {
+                const date = new Date(now - i * 3600000);
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            }).reverse();
+
+            const locations = [
+                {
+                    id: 'WHSE_A',
+                    name: 'Warehouse A',
+                    type: 'Cold Storage',
+                    capacity: '5000 units',
+                    sensors: ['TEMP_01', 'HUM_01']
+                },
+                {
+                    id: 'TRANS_B',
+                    name: 'Transport Unit B',
+                    type: 'Refrigerated Transport',
+                    capacity: '500 units',
+                    sensors: ['TEMP_02', 'HUM_02']
+                },
+                {
+                    id: 'DIST_C',
+                    name: 'Distribution Center',
+                    type: 'Processing Facility',
+                    capacity: '2000 units',
+                    sensors: ['TEMP_03', 'HUM_03']
+                }
+            ].map(location => {
+                const predictions = mlModel.predictNextHours(location.name, 24);
+                const currentPrediction = predictions[0];
+                
+                const reading = {
+                    timestamp: now,
+                    temperature: currentPrediction.temperature,
+                    humidity: currentPrediction.humidity
+                };
+
+                mlModel.addHistoricalData(location.name, reading);
+                
+                const anomalyAnalysis = mlModel.getAnomalyScore(location.name, reading);
+                const trends = mlModel.analyzeTrends(location.name);
+
+                return {
+                    ...location,
+                    temp: reading.temperature.toFixed(1),
+                    humidity: reading.humidity.toFixed(1),
+                    analysis: anomalyAnalysis,
+                    prediction: predictions[1],
+                    trends,
+                    riskScore: calculateRiskScore(reading.temperature, reading.humidity, anomalyAnalysis)
+                };
+            });
+
+            const temperatures = Array.from({length: 12}, (_, i) => {
+                const prediction = mlModel.predictNextHours('Warehouse A', 12)[i];
+                return prediction.temperature.toFixed(1);
+            });
+
+            const humidity = Array.from({length: 12}, (_, i) => {
+                const prediction = mlModel.predictNextHours('Warehouse A', 12)[i];
+                return prediction.humidity.toFixed(1);
+            });
+
+            return {
+                timestamps,
+                temperatures,
+                humidity,
+                locations
+            };
+        }
+
+        function calculateRiskScore(temp, humidity, analysis) {
+            let score = 100;
+            
+            // Temperature penalties
+            if (temp < 2 || temp > 8) score -= 40;
+            else if (temp < 3 || temp > 7) score -= 20;
+            
+            // Humidity penalties
+            if (humidity < 30 || humidity > 50) score -= 20;
+            else if (humidity < 35 || humidity > 45) score -= 10;
+            
+            // Anomaly penalties
+            if (analysis?.isAnomaly) score -= 15;
+            
+            return Math.max(0, score);
+        }
+
+        function getLocationStatus(temp, humidity) {
+            if (temp < 2 || temp > 8 || humidity < 30 || humidity > 50) return 'Critical';
+            if (temp < 3 || temp > 7 || humidity < 35 || humidity > 45) return 'Warning';
+            return 'Optimal';
+        }
+
+        function updateDashboard(data) {
+            tempChart.data.labels = data.timestamps;
+            tempChart.data.datasets[0].data = data.temperatures;
+            tempChart.update();
+
+            humidityChart.data.labels = data.timestamps;
+            humidityChart.data.datasets[0].data = data.humidity;
+            humidityChart.update();
+
+            const avgTemp = (data.temperatures.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / data.temperatures.length).toFixed(1);
+            const avgHumidity = (data.humidity.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / data.humidity.length).toFixed(1);
+
+            document.getElementById('avgTemp').textContent = `${avgTemp}°C`;
+            document.getElementById('avgHumidity').textContent = `${avgHumidity}%`;
+            document.getElementById('locationCount').textContent = data.locations.length;
+            
+            const alertCount = data.locations.reduce((count, loc) => {
+                return count + (loc.analysis?.isAnomaly ? 1 : 0);
+            }, 0);
+            document.getElementById('alertCount').textContent = alertCount;
+
+            updateLocations(data.locations);
+            updatePredictions(data.locations);
+        }
+
+        function updateLocations(locations) {
+            const grid = document.getElementById('locationsGrid');
+            grid.innerHTML = '';
+
+            locations.forEach(loc => {
+                const status = getLocationStatus(parseFloat(loc.temp), parseFloat(loc.humidity));
+                const predictionText = loc.prediction ? 
+                    `Predicted: ${loc.prediction.temperature.toFixed(1)}°C (${loc.prediction.trend > 0 ? '↑' : '↓'})` : 
+                    'Insufficient data';
+
+                const card = document.createElement('div');
+                card.className = 'location-card';
+                card.innerHTML = `
+                    <div class="location-header">
+                        <div class="location-name">
+                            <i class="fas fa-warehouse"></i>
+                            ${loc.name}
+                        </div>
+                        <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+                    </div>
+                    <div class="location-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Temperature</div>
+                            <div class="stat-value">${loc.temp}°C</div>
+                            <div class="stat-prediction">${predictionText}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Humidity</div>
+                            <div class="stat-value">${loc.humidity}%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Facility Type</div>
+                            <div class="stat-value">${loc.type}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Risk Score</div>
+                            <div class="stat-value">${loc.riskScore}%</div>
+                        </div>
+                    </div>
+                    ${loc.analysis?.isAnomaly ? `
+                    <div class="anomaly-alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Anomaly Detected: Unusual temperature pattern
+                    </div>
+                    ` : ''}
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function updatePredictions(locations) {
+            const grid = document.getElementById('predictionsGrid');
+            grid.innerHTML = '';
+
+            const predictions = locations.map(loc => {
+                const riskLevel = loc.riskScore > 80 ? 'Low' : loc.riskScore > 60 ? 'Medium' : 'High';
+                const riskClass = riskLevel.toLowerCase();
+                const trend = loc.trends?.trend || 0;
+                const confidence = loc.prediction?.confidence || 0;
+                
+                return `
+                    <div class="prediction-item">
+                        <h3>${loc.name}</h3>
+                        <p>Risk Level: <span class="status-${riskClass}">${riskLevel}</span></p>
+                        <p>Next Hour: ${loc.prediction ? loc.prediction.temperature.toFixed(1) + '°C' : 'N/A'}</p>
+                        <p>Trend: ${trend > 0 ? '↑ Rising' : '↓ Falling'} (${Math.abs(trend).toFixed(3)}°C/hr)</p>
+                        <p>Confidence: ${(confidence * 100).toFixed(1)}%</p>
+                        ${loc.analysis?.isAnomaly ? 
+                            `<p class="status-critical">Anomaly Detected (z-score: ${loc.analysis.score.toFixed(2)})</p>` 
+                            : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            grid.innerHTML = predictions;
+        }
+
+        async function refreshData(type) {
+            const refreshIcon = document.getElementById(`${type}-refresh-icon`);
+            if (refreshIcon) refreshIcon.classList.add('loading');
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const newData = getMockData();
+            updateDashboard(newData);
+            
+            if (refreshIcon) refreshIcon.classList.remove('loading');
+        }
+
+        function startAutoRefresh() {
+            setInterval(() => {
+                const newData = getMockData();
+                updateDashboard(newData);
+            }, 30000);
+        }
+
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            const initialData = getMockData();
+            updateDashboard(initialData);
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>
